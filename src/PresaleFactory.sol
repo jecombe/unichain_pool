@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "./token/Erc20.sol";
 import "./Presale.sol";
 
-contract TokenPresaleFactory {
+contract PresaleFactory {
     struct PresaleInfo {
         address presaleContract;
         address tokenContract;
@@ -28,7 +28,6 @@ contract TokenPresaleFactory {
     ) external returns (address, address) {
         // Deploy new ERC20 token
         CustomToken token = new CustomToken(name, symbol, initialSupply);
-        token.transferOwnership(msg.sender);
 
         // Deploy presale contract
         Presale presale = new Presale(

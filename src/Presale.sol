@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IUniswapV2Router02 } from "v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Presale {
     IERC20 public token;
@@ -14,13 +15,41 @@ contract Presale {
 
     mapping(address => uint256) public contributions;
 
+    struct PresaleOptions {
+        uint256 tokenDeposit;
+        uint256 hardCap;
+        uint256 softCap;
+        uint256 max;
+        uint256 min;
+        uint112 start;
+        uint112 end;
+        uint32 liquidityBps;
+    }
+
+    struct Pool {
+        IERC20 token;
+        IUniswapV2Router02 uniswapV2Router02;
+        uint256 tokenBalance;
+        uint256 tokensClaimable;
+        uint256 tokensLiquidity;
+        uint256 weiRaised;
+        address weth;
+        uint8 state;
+        PresaleOptions options;
+    }
+
+    Pool public pool;
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
         _;
     }
 
     modifier saleActive() {
-        require(block.timestamp >= startTime && block.timestamp <= endTime, "Sale is not active");
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Sale is not active"
+        );
         _;
     }
 
@@ -30,32 +59,17 @@ contract Presale {
     }
 
     constructor(
-        address _tokenAddress,
-        uint256 _pricePerToken,
-        uint256 _startTime,
-        uint256 _endTime
+        address _weth,
+        address _token,
+        address _uniswapV2Router02,
+        PresaleOptions memory _options
     ) {
         require(_startTime < _endTime, "Invalid time range");
 
-        token = IERC20(_tokenAddress);
-        owner = msg.sender;
-        pricePerToken = _pricePerToken;
-        startTime = _startTime;
-        endTime = _endTime;
-    }
-
-    function buyTokens() external payable saleActive {
-        uint256 amountToBuy = msg.value * pricePerToken;
-        raisedAmount += msg.value;
-        contributions[msg.sender] += msg.value;
-
-        token.transfer(msg.sender, amountToBuy);
-    }
-
-    function finalizePresale() external onlyOwner saleEnded {
-        require(!isFinalized, "Presale already finalized");
-        isFinalized = true;
-
-        payable(owner).transfer(address(this).balance);
+        pool.uniswapV2Router02 = IUniswapV2Router02(_uniswapV2Router02);
+        pool.token = IERC20(_token);
+        pool.state = 1;
+        pool.weth = _weth;
+        pool.options = _options;
     }
 }
